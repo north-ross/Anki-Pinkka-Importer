@@ -54,7 +54,7 @@ MODEL = Model(
         {
             'name': 'Card1',
             'qfmt': '{{Images}}',
-            'afmt': '{{FrontSide}}<hr id="answer"><i><a href="{{Pinkka URL}}">{{Species Name}}</a></i><br><b>{{Family}}</b><br>{{Finnish Name}}',
+            'afmt': '{{FrontSide}}<hr id="answer"><i><a href="{{Pinkka URL}}" style="color:white;">{{Species Name}}</a></i><br><b>{{Family}}</b><br>{{Finnish Name}}',
         },
     ]
 )
