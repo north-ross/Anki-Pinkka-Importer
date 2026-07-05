@@ -54,7 +54,8 @@ MODEL = Model(
         {
             'name': 'Card1',
             'qfmt': '{{Images}}',
-            'afmt': '{{FrontSide}}<hr id="answer"><i><a href="{{Pinkka URL}}" style="color:white;">{{Species Name}}</a></i><br><b>{{Family}}</b><br>{{Finnish Name}}',
+            'afmt': '{{FrontSide}}<hr id="answer"><i><u><a href="{{Pinkka URL}}" style="color:white;">{{Species Name}}</a></u></i>'+
+                    '<br><b>{{Family}}</b><br>{{Finnish Name}}',
         },
     ]
 )
@@ -123,7 +124,6 @@ def create_anki_deck(species_list, req_images_number=4, image_size="square", lan
         subdecks_dict = {}
         deck_id=1
         for sub_pinkka in sub_pinkkas:
-            #TODO Fix it seems to only be getting the first one
             subdeck = Deck(deck_id, f"{pinkka_name}::{sub_pinkka}" )
             subdecks_dict[sub_pinkka] = subdeck
             print(f"{subdeck.name} created")
