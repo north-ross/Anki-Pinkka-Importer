@@ -25,4 +25,8 @@ You can sync to your Anki account and use the app to study on your phone. It's f
 
 If you have found this useful this consider donating to the free and open source software [Anki](https://apps.ankiweb.net/).
 
-Disclaimer: Some code advice came from [duck.ai](https://duck.ai) (Claude Haiku 4.5).
+Disclaimer: 
+
+Some code adapted from [Anki Quizlet Importer Extended](https://github.com/sviatoslav-lebediev/anki-quizlet-importer-extended).
+
+Some code advice came from [duck.ai](https://duck.ai) (Claude Haiku 4.5).

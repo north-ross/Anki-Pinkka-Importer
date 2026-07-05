@@ -2,9 +2,79 @@ import time
 import json
 from pathlib import Path
 import requests
-from genanki import Deck, Note, Model, Package
+import re
+import urllib
 
 BASE_URL = "https://fmnh-ws-prod3.it.helsinki.fi/pinkka/api"
+
+# Get Pinkka ID, adapted from Quizlet plugin
+def getPinkkaDeckID(self):
+        # grab url input
+        url = self.text_url.text()
+
+        # validate quizlet URL
+        if url == "":
+            self.label_results.setText("You forgot the deck URL :(")
+            return
+        elif not "pinkka.laji.fi" in url:
+            self.label_results.setText("Oops! That's not a Pinkka URL :(")
+            return
+        elif not re.search(r"https://pinkka.laji.fi/pinkat/#/pinkkas/[\d]+", url):
+            self.label_results.setText("Oops! Please use the full deck URL, e.g. https://pinkka.laji.fi/pinkat/#/pinkkas/8 :(")
+            return
+
+        # voodoo needed for some error handling
+        if urllib.parse.urlparse(url).scheme:
+            urlPath = urllib.parse.urlparse(url).path
+        else:
+            urlPath = urllib.parse.urlparse("https://"+url).path
+
+        # validate and set Quizlet deck ID
+        pinkkaDeckID = urlPath.strip("/")
+
+        if pinkkaDeckID == "":
+            self.label_results.setText("Oops! Please use the full deck URL, e.g. https://pinkka.laji.fi/pinkat/#/pinkkas/8 :(")
+            return
+
+        return pinkkaDeckID
+
+# Create Anki model (front: image, back: species name)
+# adapted from "Quizlet Plugin for Anki"
+def add_custom_model(col):
+    """Creates or updates existing Anki model
+
+    Args:
+        col (anki.collection.Collection): Current Anki collection (mw.col)
+
+    Returns:
+        _type_: Anki model object (NotetypeDict?)
+    """
+
+    # create custom model for imported deck
+    mm = col.models
+    existing = mm.by_name("Pinkka Species")
+    if existing:
+        return existing
+    m = mm.new("Pinkka Species")
+
+    # add fields
+    mm.addField(m, mm.newField("Species Name"))
+    mm.addField(m, mm.newField("Images"))
+    mm.addField(m, mm.newField("Family"))
+    mm.addField(m, mm.newField("Finnish Name"))
+    mm.addField(m, mm.newField("Pinkka URL"))
+    
+    # add cards
+    t = mm.newTemplate("ImageFront")
+
+    # front
+    t['qfmt'] = "{{Images}}"
+    t['afmt'] = '{{FrontSide}}<hr id="answer">'+\
+        '<i><u><a href="{{Pinkka URL}}" style="color:white;">{{Species Name}}</a></u></i>'+\
+        '<br><b>{{Family}}</b><br>{{Finnish Name}}'
+    mm.addTemplate(m, t)
+    mm.add(m)
+    return m
 
 def get_all_species_ids(pinkka_id):
     """Fetch all species IDs and sub name from a pinkka and its subPinkkas
@@ -37,28 +107,6 @@ def get_all_species_ids(pinkka_id):
 
     print(f"\nTotal species across all subPinkkas: {len(all_taxon_ids)}")
     return all_taxon_ids
-
-# Create Anki model (front: image, back: species name)
-model_id = 1234567899
-MODEL = Model(
-    model_id,
-    'Pinkka Species1',
-    fields=[
-        {'name': 'Species Name', 'sticky': False},
-        {'name': 'Images', 'sticky': False},
-        {'name': 'Family', 'sticky': False},
-        {'name': 'Finnish Name', 'sticky': False},
-        {'name': 'Pinkka URL', 'sticky': False}
-    ],
-    templates=[
-        {
-            'name': 'Card1',
-            'qfmt': '{{Images}}',
-            'afmt': '{{FrontSide}}<hr id="answer"><i><u><a href="{{Pinkka URL}}" style="color:white;">{{Species Name}}</a></u></i>'+
-                    '<br><b>{{Family}}</b><br>{{Finnish Name}}',
-        },
-    ]
-)
 
 def fetch_species_data(species_id):
     """Fetch species card data from API"""
@@ -106,6 +154,7 @@ def download_image(image_url, species_id, i):
 
 
 def create_anki_deck(species_list, req_images_number=4, image_size="square", lang='en', pinkka_name = 'My Pinkka Deck', make_subdecks=False):
+    # TODO: Adapt to get parameters from self. insetad of arguments
     """Creates an Anki package (.apkg) from a provided list of species IDs. 
         Downloads the specified number of images. 
 
@@ -194,6 +243,8 @@ def create_anki_deck(species_list, req_images_number=4, image_size="square", lan
             continue
         # Pinkka URL
         species_url = f"https://pinkka.laji.fi/pinkat/#/speciescards/{species_id}"
+
+        ## TODO: edit from here to use anki lib
         # Create Anki note
         note = Note(
             model=MODEL,
