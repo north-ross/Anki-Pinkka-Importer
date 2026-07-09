@@ -9,7 +9,7 @@ from aqt.qt import QMessageBox
 from datetime import datetime
 
 BASE_URL = "https://fmnh-ws-prod3.it.helsinki.fi/pinkka/api"
-TESTING = False # set to true to just fetch the first four cards
+TESTING = True # set to true to just fetch the first four cards
 
 def add_log_message(self, message, level="INFO"):
     """Generate timestamped log message
@@ -125,6 +125,7 @@ def get_all_species_ids(self, pinkka_id):
     all_taxon_ids = []
     
     # Step 2: Loop through each subPinkka
+    last_progress = datetime.now()
     for sub_pinkka in sub_pinkkas:
         sub_id = sub_pinkka['id']
         sub_name = sub_pinkka['name'].get('en', sub_pinkka['name'].get('fi', 'Unknown'))
@@ -138,10 +139,12 @@ def get_all_species_ids(self, pinkka_id):
         taxon_ids = [[s['id'], sub_name] for s in species_in_sub]
 
         all_taxon_ids.extend(taxon_ids)
-        # mw.taskman.run_on_main(
-        #     lambda name=sub_name: add_log_message(self, f"\t{name}: {len(species_in_sub)} species")
-        # )
-        # mw.taskman.run_on_main(lambda: mw.app.processEvents())
+        mw.taskman.run_on_main(
+            lambda name=sub_name: add_log_message(self, f"\t{name}: {len(species_in_sub)} species")
+        )
+        if (datetime.now() - last_progress).total_seconds() >= 1:
+            mw.taskman.run_on_main(lambda: mw.app.processEvents())
+            last_progress = datetime.now()
     print("reached end of function")
     return all_taxon_ids
 
@@ -216,18 +219,22 @@ def create_note_list(self, species_list):
         species_list = species_list[0:4]
 
     i=0
+    total = len(species_list)
+    last_progress = datetime.now()
     for species in species_list:
         species_id = species[0]
         sub_pinkka = species[1]
         data = fetch_species_data(species_id)
-        # mw.taskman.run_on_main(
-        #     lambda: add_log_message(self, f"got data for {species_id} ({data.get('scientificName')})")
-        # )
+        mw.taskman.run_on_main(
+            lambda: add_log_message(self, f"got data for {species_id} ({data.get('scientificName')})")
+        )
         if not data:
             mw.taskman.run_on_main(
                 lambda sid=species_id: add_log_message(self,  f"Could not find species {sid}", level="WARNING")
             )
-            mw.taskman.run_on_main(lambda: mw.app.processEvents())
+            if (datetime.now() - last_progress).total_seconds() >= 1:
+                mw.taskman.run_on_main(lambda: mw.app.processEvents())
+                last_progress = datetime.now()
             continue
         
         # Extract species name, image URLs, taxonomy info
@@ -278,6 +285,10 @@ def create_note_list(self, species_list):
             mw.taskman.run_on_main(
                 lambda: add_log_message(self, "\tNo Images Available. Skipping", level="WARNING")
             )
+            if (datetime.now() - last_progress).total_seconds() >= 1:
+                mw.taskman.run_on_main(lambda: mw.app.processEvents())
+                last_progress = datetime.now()
+
             continue
         # Pinkka URL
         species_url = f"https://pinkka.laji.fi/pinkat/#/speciescards/{species_id}"
@@ -298,16 +309,18 @@ def create_note_list(self, species_list):
         note_list.append(note)
         
         i+=1
-        # mw.taskman.run_on_main(
-        #     lambda prog=i: self.progress_bar.setValue(prog)
-        # )
-        # mw.taskman.run_on_main(lambda: mw.app.processEvents())
+        mw.taskman.run_on_main(
+            lambda prog=i: self.progress_bar.setValue(prog)
+        )
+        if (datetime.now() - last_progress).total_seconds() >= 1:
+            mw.taskman.run_on_main(lambda: mw.app.processEvents())
+            last_progress = datetime.now()
         
     note_count = len(note_list)
-    # mw.taskman.run_on_main(
-    #     lambda notes=note_count: self.status_label.setText(f"Downloaded {notes} / {len(species_list)} species")
-    # )
-    #mw.taskman.run_on_main(lambda: mw.app.processEvents())
+    mw.taskman.run_on_main(
+        lambda notes=note_count: self.status_label.setText(f"Downloaded {notes} / {len(species_list)} species")
+    )
+    mw.taskman.run_on_main(lambda: mw.app.processEvents())
     return note_list
     
 
