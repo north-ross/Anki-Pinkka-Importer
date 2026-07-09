@@ -11,7 +11,7 @@ This is a distinct iteration on [Pinkka2Anki](https://github.com/north-ross/pink
 Please raise an issue on the [GitHub page](https://github.com/north-ross/Anki-Pinkka-Importer/issues) if you have any feedback or suggestions.
 
 # Use
-1. After installing, select "Import Pinkka Deck" from the "Tools" menu in the upper left
+1. After installing (follow the instructions [here](https://ankiweb.net/shared/info/1934767559)), select "Import Pinkka Deck" from the "Tools" menu in the upper left.
 2. Paste the URL to the Pinkka collection in the first box, and enter an appropriate deck name in the next one. Note that if you enter the name of an existing deck, it will be updated with any new cards from your query.
 3. Select any additional options. 
     - I find that the default options (four cards at the "square" size) is sufficient for studying, although some will need to be manually edited. See my Studying Tips below.

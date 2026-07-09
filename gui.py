@@ -49,19 +49,15 @@ class PinkkaImportDialog(QDialog):
         self.deck_name_input.setPlaceholderText("e.g., IPS-153 Flora of Subarctic Europe")
         layout.addRow("Deck Name:", self.deck_name_input)
 
-        #TODO: Add options
         self.images_number_input = QSpinBox()
         self.images_number_input.setRange(1,20)
         self.images_number_input.setValue(4)
         layout.addRow("Number of Images (max):", self.images_number_input)
 
         self.image_size = QComboBox()
-        self.image_size.addItems(['square', 'large', 'thumb'])
+        self.image_size.addItems(['square (~30kB)', 'large (~80 kB)', 'thumb (~10kB)'])
         layout.addRow("Image size:", self.image_size)
 
-        # Get half of images from the end of the images? QCheckBox()
-
-        # self.subpinkka_tag = QCheckBox("", self) # include SubPinkka name as tag?
         self.common_name_input = QComboBox()
         self.common_name_input.addItems(['Finnish Name', 'Swedish Name', 'English Name', 'None'])
         layout.addRow("Common name to include on card:", self.common_name_input)
@@ -69,6 +65,13 @@ class PinkkaImportDialog(QDialog):
         self.lang_input = QComboBox()
         self.lang_input.addItems(['en', 'fi', 'sv'])
         layout.addRow("Language for taxonomy tags:", self.lang_input)
+
+        #TODO: Add these more options:
+        # self.get_back_images = QCheckBox()
+        # layout.addRow("Get half the images from the end of the list?", self.get_back_images)
+        
+        # self.subpinkka_tag = QCheckBox("", self) # include SubPinkka name as tag?
+        # Choose which taxonomy levels to include as tags?
 
         group.setLayout(layout)
         return group

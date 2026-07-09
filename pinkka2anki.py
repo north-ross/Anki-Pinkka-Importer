@@ -9,7 +9,7 @@ from aqt.qt import QMessageBox
 from datetime import datetime
 
 BASE_URL = "https://fmnh-ws-prod3.it.helsinki.fi/pinkka/api"
-TESTING = False # set to true to just fetch the first four cards
+TESTING = True # set to true to just fetch the first four cards
 
 def add_log_message(self, message, level="INFO"):
     """Generate timestamped log message
@@ -218,7 +218,7 @@ def create_note_list(self, species_list):
     mw.taskman.run_on_main(lambda: mw.app.processEvents())
 
     req_images_number = int(self.images_number_input.cleanText()) # set to self.req_images_number
-    image_size = str(self.image_size.currentText())
+    image_size = str(self.image_size.currentText()).split(" ", maxsplit=1)[0]
     get_back_images = False
     lang = str(self.lang_input.currentText())
 
@@ -226,13 +226,13 @@ def create_note_list(self, species_list):
     note_list = []
     
     if TESTING:
-        species_list = species_list[0:16]
+        species_list = species_list[0:4]
 
     progress_number=0
     total = len(species_list)
     last_progress = datetime.now()
     for species in species_list:
-        species_id = species[0]
+        species_id = species[0] # Unique ID within this Pinkka collection
         sub_pinkka = species[1]
         data = fetch_species_data(species_id)
         if not data:
@@ -246,7 +246,8 @@ def create_note_list(self, species_list):
         species_name = data.get('scientificName')
 
         # add_log_message(self, f"Read {species_name}")
-        taxon_id = data.get('taxonId')
+
+        taxon_id = data.get('taxonId') # unique ID in all of Pinkka, between collections
 
         # Get common names
         common_names = {}
@@ -314,7 +315,7 @@ def create_note_list(self, species_list):
                 "Notes": ""
                 },
             'tags': taxonomy_list,
-            'guid': taxon_id
+            'guid': species_id
         }
         note_list.append(note)
         
@@ -352,6 +353,8 @@ def create_anki_deck(self, note_list):
     last_progress = datetime.now()
     for item in note_list:
         note = mw.col.newNote()
+        note.guid = str(item['guid'])
+        
         # Get field names from the model in order
         field_names = [f["name"] for f in model["flds"]]
         # Assign by index
