@@ -86,6 +86,7 @@ def add_custom_model(self, col):
     mm = col.models
     existing = mm.by_name("Pinkka Importer")
     if existing:
+        add_log_message(self, "Found existing note type \"Pinkka Importer\"")
         return existing
     m = mm.new("Pinkka Importer")
 
@@ -116,6 +117,7 @@ def add_custom_model(self, col):
         '<br><b>{{Family}}</b>'+common_name_tag+'<br>{{Notes}}'
     mm.addTemplate(m, t)
     mm.add(m)
+    add_log_message(self, "Created new note type")
     return m
 
 def get_all_species_ids(self, pinkka_id):
@@ -147,7 +149,7 @@ def get_all_species_ids(self, pinkka_id):
         taxon_ids = [[s['id'], sub_name] for s in species_in_sub]
 
         all_taxon_ids.extend(taxon_ids)
-        #TODO: Update all these to use progress.update() or whatever
+
         mw.taskman.run_on_main(
             lambda name=sub_name: add_log_message(self, f"\t{name}: {len(species_in_sub)} species")
         )
@@ -165,6 +167,7 @@ def fetch_species_data(species_id):
     except Exception as e:
         print(
             "Network Error",f"Error fetching species {species_id}: {e}")
+        add_log_message(self, f"Error fetching species {species_id}: {e}", level="ERROR")
         return None
 
 def download_image(image_url, species_id, i):
@@ -242,7 +245,7 @@ def create_note_list(self, species_list):
         # Extract species name, image URLs, taxonomy info
         species_name = data.get('scientificName')
 
-        add_log_message(self, f"Fetched {species_name}")
+        # add_log_message(self, f"Read {species_name}")
         taxon_id = data.get('taxonId')
 
         # Get common names
@@ -316,8 +319,9 @@ def create_note_list(self, species_list):
         note_list.append(note)
         
         progress_number += 1
-        prog_pct = progress_number / total * 100
+        prog_pct = int(progress_number / total * 100)
         if (datetime.now() - last_progress).total_seconds() >= 1:
+            add_log_message(self, f"Read {progress_number+1} species")
             mw.taskman.run_on_main(
                 lambda prog=prog_pct: self.progress_bar.setValue(prog_pct)
             )
@@ -325,7 +329,7 @@ def create_note_list(self, species_list):
             last_progress = datetime.now()
         
     note_count = len(note_list)
-    add_log_message(self, f"finished fetching {note_count}")
+    add_log_message(self, f"finished fetching {note_count}", level="SUCCESS")
     return note_list
     
 
@@ -363,8 +367,10 @@ def create_anki_deck(self, note_list):
         mw.col.addNote(note)
 
         progress += 1
-        add_log_message(self, f"Created note {item['fields']['Species Name']}")
+        # add_log_message(self, f"Created note {item['fields']['Species Name']}")
 
         if (datetime.now() - last_progress).total_seconds() >= 1:
             mw.app.processEvents()
             last_progress = datetime.now()
+
+    add_log_message(self, f"Created deck and notes", level="SUCCESS")
