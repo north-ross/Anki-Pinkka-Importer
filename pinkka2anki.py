@@ -9,7 +9,7 @@ from aqt.qt import QMessageBox
 from datetime import datetime
 
 BASE_URL = "https://fmnh-ws-prod3.it.helsinki.fi/pinkka/api"
-TESTING = False # set to true to just fetch the first four cards
+TESTING = True # set to true to just fetch the first four cards
 
 def add_log_message(self, message, level="INFO"):
     """Generate timestamped log message
@@ -73,7 +73,7 @@ def getPinkkaDeckID(self):
 
 # Create Anki model (front: image, back: species name)
 # adapted from "Quizlet Plugin for Anki"
-def add_custom_model(col):
+def add_custom_model(self, col):
     """Creates or updates existing Anki model
 
     Args:
@@ -85,27 +85,36 @@ def add_custom_model(col):
 
     # create custom model for imported deck
     mm = col.models
-    existing = mm.by_name("Pinkka Species")
+    existing = mm.by_name("Pinkka Importer")
     if existing:
         return existing
-    m = mm.new("Pinkka Species")
+    m = mm.new("Pinkka Importer")
 
     # add fields
-    mm.addField(m, mm.newField("Species Name"))
-    mm.addField(m, mm.newField("Images"))
-    mm.addField(m, mm.newField("Family"))
-    mm.addField(m, mm.newField("Finnish Name"))
-    mm.addField(m, mm.newField("Pinkka URL"))
-    mm.addField(m, mm.newField("Notes"))
+    mm.addField(m, mm.new_field("Species Name"))
+    mm.addField(m, mm.new_field("Images"))
+    mm.addField(m, mm.new_field("Family"))
+    mm.addField(m, mm.new_field("Finnish Name"))
+    mm.addField(m, mm.new_field("Swedish Name"))
+    mm.addField(m, mm.new_field("English Name"))
+    mm.addField(m, mm.new_field("Pinkka URL"))
+    mm.addField(m, mm.new_field("Notes"))
     
     # add cards
-    t = mm.newTemplate("ImageFront")
+    t = mm.new_template("ImageFront")
+
+    # Choose which common name to show
+    common_name_text = str(self.common_name_input.currentText())
+    if common_name_text != "None":
+        common_name_tag = "<br>{{" + common_name_text + "}}"
+    else:
+        common_name_tag = ""
 
     # front
     t['qfmt'] = "{{Images}}"
     t['afmt'] = '{{FrontSide}}<hr id="answer">'+\
         '<i><u><a href="{{Pinkka URL}}" style="color:white;">{{Species Name}}</a></u></i>'+\
-        '<br><b>{{Family}}</b><br>{{Finnish Name}}<br>{{Notes}}'
+        '<br><b>{{Family}}</b>'+common_name_tag+'<br>{{Notes}}'
     mm.addTemplate(m, t)
     mm.add(m)
     return m
@@ -208,10 +217,11 @@ def create_note_list(self, species_list):
     self.progress_bar.setVisible(True)
     print(f"LENgth of species list: {len(species_list)}")
     self.progress_bar.setMaximum(len(species_list))
-    req_images_number = 4 # set to self.req_images_number
-    image_size="square"
+
+    req_images_number = int(self.images_number_input.cleanText()) # set to self.req_images_number
+    image_size = str(self.image_size.currentText())
     get_back_images = False
-    lang='en'
+    lang = str(self.lang_input.currentText())
 
     media_list = []
     note_list = []
@@ -227,7 +237,7 @@ def create_note_list(self, species_list):
         sub_pinkka = species[1]
         data = fetch_species_data(species_id)
         if not data:
-            add_log_message(self,  f"Could not find species {sid}", level="WARNING")
+            add_log_message(self,  f"Could not find species {species_id}", level="WARNING")
             if (datetime.now() - last_progress).total_seconds() >= 1:
                 mw.taskman.run_on_main(lambda: mw.app.processEvents())
                 last_progress = datetime.now()
@@ -238,10 +248,14 @@ def create_note_list(self, species_list):
 
         add_log_message(self, f"Fetched {species_name}")
         taxon_id = data.get('taxonId')
-        try:
-            finnish_name = data.get('vernacularName')['fi']
-        except KeyError:
-            finnish_name = ""
+
+        # Get common names
+        common_names = {}
+        for language in ['fi', 'sv', 'en']:
+            try:
+                common_names[language] = data.get('vernacularName')[language]
+            except KeyError:
+                common_names[language] = ""
 
         taxonomy_list = []
         family = ""
@@ -294,7 +308,9 @@ def create_note_list(self, species_list):
                 "Species Name": species_name, 
                 "Images": img_field, 
                 "Family": family, 
-                "Finnish Name": finnish_name, 
+                "Finnish Name": common_names['fi'], 
+                "Swedish Name": common_names['sv'], 
+                "English Name": common_names['en'], 
                 "Pinkka URL": species_url,
                 "Notes": ""
                 },
@@ -323,7 +339,7 @@ def create_anki_deck(self, note_list):
     progress = 0
 
     deck = mw.col.decks.get(mw.col.decks.id(self.deck_name_input.text()))
-    model = add_custom_model(mw.col)
+    model = add_custom_model(self, mw.col)
 
     # assign custom model to new deck
     mw.col.decks.select(deck["id"])

@@ -49,10 +49,26 @@ class PinkkaImportDialog(QDialog):
         self.deck_name_input.setPlaceholderText("e.g., IPS-153 Flora of Subarctic Europe")
         layout.addRow("Deck Name:", self.deck_name_input)
 
-        # self.lang_input = QHBoxLayout() # This should be replaced with a dropdown or something
-        # self.images_number_input = QLineEdit() (spinbox)
-        # self.image_size = self.input_field.text() # This should also be a dropdown
+        #TODO: Add options
+        self.images_number_input = QSpinBox()
+        self.images_number_input.setRange(1,20)
+        self.images_number_input.setValue(4)
+        layout.addRow("Number of Images (max):", self.images_number_input)
+
+        self.image_size = QComboBox()
+        self.image_size.addItems(['square', 'large', 'thumb'])
+        layout.addRow("Image size:", self.image_size)
+
+        # Get half of images from the end of the images? QCheckBox()
+
         # self.subpinkka_tag = QCheckBox("", self) # include SubPinkka name as tag?
+        self.common_name_input = QComboBox()
+        self.common_name_input.addItems(['Finnish Name', 'Swedish Name', 'English Name', 'None'])
+        layout.addRow("Common name to include on card:", self.common_name_input)
+
+        self.lang_input = QComboBox()
+        self.lang_input.addItems(['en', 'fi', 'sv'])
+        layout.addRow("Language for taxonomy tags:", self.lang_input)
 
         group.setLayout(layout)
         return group
