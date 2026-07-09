@@ -4,14 +4,11 @@ An Anki addon to convert plant image collections from [Pinkka](https://pinkka.la
 
 I have been studying Finnish plants using Pinkka, but I thought it would be useful to have the spaced repetition from Anki, plus the ability to organize the cards by family or other categories.
 
+The Anki deck that is created will have your desired number of images on the front of the flashcard, then the given scientific name, family and common name on the back. The scientific name is also a hyperlink to the source Pinkka page. You can customize the cards once you add them to Anki, including adding to the Notes field which will display at the end, or changing the images.
+
 This is a distinct iteration on [Pinkka2Anki](https://github.com/north-ross/pinkka2anki), adapting it to work as an Anki addon instead of a Python tool to package a .apkg file (which used GenAnki instead of the native libraries).
 
 Please raise an issue on the [GitHub page](https://github.com/north-ross/Anki-Pinkka-Importer/issues) if you have any feedback or suggestions.
-
-# Dependencies
-- Python 3.4+
-- `requests` (`pip install requests`)
-- `anki`/`aqt` (packaged with Anki)
 
 # Use
 1. After installing, select "Import Pinkka Deck" from the "Tools" menu in the upper left
@@ -22,7 +19,7 @@ Please raise an issue on the [GitHub page](https://github.com/north-ross/Anki-Pi
     - If you have already imported some notes and are having issues with fields not importing, try deleting the note type from the Browse window.
 4. Click "Import" and your deck should be created. Downloading a large collection could take up to five minutes depending on your configuration.
 
-## My Studing Tips
+## My Studying Tips
 - Use the tags on the cards like family and sub-pinkka for [Custom Study](https://docs.ankiweb.net/filtered-decks.html?highlight=filtered%20deck#custom-study). You can also add your own tags, like "small-white-flower" or "aquatic" for example, to help with comparing different ones. 
     - Don't rely on this too much, since Anki works best by using large decks with a variety of terms to help your memory.
 
@@ -30,9 +27,12 @@ Please raise an issue on the [GitHub page](https://github.com/north-ross/Anki-Pi
 
 - You can sync to your Anki account and use the app to study on your phone. It's free on Android but the official iOS app is a bit expensive, although there are some free forks of it.
 
-# Notes
-The Anki deck that is created will have your desired number of images on the front of the flashcard, then the given scientific name, family and Finnish name on the back. You can customize the cards once you add them to Anki.
+# Dependencies
+- Python 3.4+
+- `requests` (`pip install requests`)
+- `anki`/`aqt` (packaged with Anki)
 
+# Notes
 If you have found this useful this consider donating to the free and open source software [Anki](https://apps.ankiweb.net/).
 
 Some was code adapted from [Anki Quizlet Importer Extended](https://github.com/sviatoslav-lebediev/anki-quizlet-importer-extended).
