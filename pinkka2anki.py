@@ -9,7 +9,7 @@ from aqt.qt import QMessageBox
 from datetime import datetime
 
 BASE_URL = "https://fmnh-ws-prod3.it.helsinki.fi/pinkka/api"
-TESTING = True # set to true to just fetch the first four cards
+TESTING = False # set to true to just fetch the first four cards
 
 def add_log_message(self, message, level="INFO"):
     """Generate timestamped log message
@@ -104,8 +104,8 @@ def add_custom_model(col):
     # front
     t['qfmt'] = "{{Images}}"
     t['afmt'] = '{{FrontSide}}<hr id="answer">'+\
-        '<i><u><a href="{{Pinkka URL}}" style="color:white;font-size: 16px;">{{Species Name}}</a></u></i>'+\
-        '<br><b>{{Family}}</b><br>{{Finnish Name}}<br>'
+        '<i><u><a href="{{Pinkka URL}}" style="color:white;">{{Species Name}}</a></u></i>'+\
+        '<br><b>{{Family}}</b><br>{{Finnish Name}}<br>{{Notes}}'
     mm.addTemplate(m, t)
     mm.add(m)
     return m
@@ -139,6 +139,7 @@ def get_all_species_ids(self, pinkka_id):
         taxon_ids = [[s['id'], sub_name] for s in species_in_sub]
 
         all_taxon_ids.extend(taxon_ids)
+        #TODO: Update all these to use progress.update() or whatever
         mw.taskman.run_on_main(
             lambda name=sub_name: add_log_message(self, f"\t{name}: {len(species_in_sub)} species")
         )
@@ -225,13 +226,8 @@ def create_note_list(self, species_list):
         species_id = species[0]
         sub_pinkka = species[1]
         data = fetch_species_data(species_id)
-        mw.taskman.run_on_main(
-            lambda: add_log_message(self, f"got data for {species_id} ({data.get('scientificName')})")
-        )
         if not data:
-            mw.taskman.run_on_main(
-                lambda sid=species_id: add_log_message(self,  f"Could not find species {sid}", level="WARNING")
-            )
+            add_log_message(self,  f"Could not find species {sid}", level="WARNING")
             if (datetime.now() - last_progress).total_seconds() >= 1:
                 mw.taskman.run_on_main(lambda: mw.app.processEvents())
                 last_progress = datetime.now()
@@ -239,6 +235,8 @@ def create_note_list(self, species_list):
         
         # Extract species name, image URLs, taxonomy info
         species_name = data.get('scientificName')
+
+        add_log_message(self, f"Fetched {species_name}")
         taxon_id = data.get('taxonId')
         try:
             finnish_name = data.get('vernacularName')['fi']
@@ -267,7 +265,6 @@ def create_note_list(self, species_list):
         # loop over images and download
         if images_number > 0:
             img_field = ""
-            add_log_message(self, f"\t{images_number} images available")
             for i in range(0, images_number):
                 # get first half of images from start
                 if not get_back_images or (i+1) <= round(images_number/2):
@@ -282,9 +279,7 @@ def create_note_list(self, species_list):
                 # format for field
                 img_field = f"{img_field} <img src=\"{image_path.name}\">"
         else:
-            mw.taskman.run_on_main(
-                lambda: add_log_message(self, "\tNo Images Available. Skipping", level="WARNING")
-            )
+            add_log_message(self, "\tNo Images Available. Skipping", level="WARNING")
             if (datetime.now() - last_progress).total_seconds() >= 1:
                 mw.taskman.run_on_main(lambda: mw.app.processEvents())
                 last_progress = datetime.now()
@@ -309,10 +304,10 @@ def create_note_list(self, species_list):
         note_list.append(note)
         
         i+=1
-        mw.taskman.run_on_main(
-            lambda prog=i: self.progress_bar.setValue(prog)
-        )
         if (datetime.now() - last_progress).total_seconds() >= 1:
+            mw.taskman.run_on_main(
+                lambda prog=i: self.progress_bar.setValue(prog)
+            )
             mw.taskman.run_on_main(lambda: mw.app.processEvents())
             last_progress = datetime.now()
         
@@ -343,12 +338,10 @@ def create_anki_deck(self, note_list):
         note = mw.col.newNote()
         # Get field names from the model in order
         field_names = [f["name"] for f in model["flds"]]
-        print("FIELD NAMES:", field_names)
         # Assign by index
         for idx, field_name in enumerate(field_names):
             if field_name in item["fields"]:
                 note.fields[idx] = item["fields"][field_name]
-                print(field_name)
 
         # Add all tags from dict
         for tag in item['tags']:
@@ -356,7 +349,6 @@ def create_anki_deck(self, note_list):
 
         # Add note to deck
         mw.col.addNote(note)
-        print("Added note")
 
         progress += 1
         self.status_label.setText(
