@@ -9,7 +9,7 @@ from aqt.qt import QMessageBox
 from datetime import datetime
 
 BASE_URL = "https://fmnh-ws-prod3.it.helsinki.fi/pinkka/api"
-TESTING = False # set to true to just fetch the first four cards
+TESTING = True # set to true to just fetch the first four cards
 
 def add_log_message(self, message, level="INFO"):
     """Generate timestamped log message
@@ -155,7 +155,6 @@ def get_all_species_ids(self, pinkka_id):
         if (datetime.now() - last_progress).total_seconds() >= 1:
             mw.taskman.run_on_main(lambda: mw.app.processEvents())
             last_progress = datetime.now()
-    print("reached end of function")
     return all_taxon_ids
 
 def fetch_species_data(species_id):
@@ -194,13 +193,11 @@ def download_image(image_url, species_id, i):
             # Save image
             with open(filepath, 'wb') as f:
                 f.write(response.content)
-                print(f"\twrote to {filepath}")
             return filepath
         except Exception as e:
             print(f"Error downloading image for {species_id}: {e}")
             return None
     else:
-        print(f"\t{filepath} cached")
         return filepath
 
 def create_note_list(self, species_list):
@@ -214,9 +211,9 @@ def create_note_list(self, species_list):
     """
     # TODO: adapt to use self 
     self.status_label.setText("Downloading species data")
-    self.progress_bar.setVisible(True)
-    print(f"LENgth of species list: {len(species_list)}")
-    self.progress_bar.setMaximum(len(species_list))
+    mw.taskman.run_on_main(lambda: self.progress_bar.setVisible(True))
+    mw.taskman.run_on_main(lambda: self.progress_bar.setMaximum(len(species_list)))
+    mw.taskman.run_on_main(lambda: mw.app.processEvents())
 
     req_images_number = int(self.images_number_input.cleanText()) # set to self.req_images_number
     image_size = str(self.image_size.currentText())
@@ -227,7 +224,7 @@ def create_note_list(self, species_list):
     note_list = []
     
     if TESTING:
-        species_list = species_list[0:4]
+        species_list = species_list[0:16]
 
     i=0
     total = len(species_list)
@@ -321,13 +318,16 @@ def create_note_list(self, species_list):
         
         i+=1
         if (datetime.now() - last_progress).total_seconds() >= 1:
+            print(f"updating bar at {i}")
             mw.taskman.run_on_main(
+                # TODO: Fix problem here, value not displaying correctly
                 lambda prog=i: self.progress_bar.setValue(prog)
             )
             mw.taskman.run_on_main(lambda: mw.app.processEvents())
             last_progress = datetime.now()
         
     note_count = len(note_list)
+    print(f"finished fetching {note_count}")
     mw.taskman.run_on_main(
         lambda notes=note_count: self.status_label.setText(f"Downloaded {notes} / {len(species_list)} species")
     )
@@ -367,6 +367,7 @@ def create_anki_deck(self, note_list):
         mw.col.addNote(note)
 
         progress += 1
+        add_log_message(self, f"Created note {item['fields']['Species Name']}")
         self.status_label.setText(
             (f"Imported {progress}/{len(note_list)}"))
         mw.app.processEvents()
