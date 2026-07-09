@@ -6,7 +6,7 @@ I have been studying Finnish plants using Pinkka, but I thought it would be usef
 
 This is a distinct iteration on [Pinkka2Anki](https://github.com/north-ross/pinkka2anki), adapting it to work as an Anki addon instead of a Python tool to package a .apkg file (which used GenAnki instead of the native libraries).
 
-Unfortunately, I couldn't get it to work using the image URLs, so it needs to download all the images. I used the medium-size "square" resolution as deafault, but the script can be configured to use "thumbnail" instead. For reference, four "square"-size images for 652 notes resulted in a 80 MB Anki package.
+Please raise an issue on the [GitHub page](https://github.com/north-ross/Anki-Pinkka-Importer/issues) if you have any feedback or suggestions.
 
 # Dependencies
 - Python 3.4+
@@ -14,13 +14,19 @@ Unfortunately, I couldn't get it to work using the image URLs, so it needs to do
 - `anki`/`aqt` (packaged with Anki)
 
 # Use
-- See GUI instructions
+1. After installing, select "Import Pinkka Deck" from the "Tools" menu in the upper left
+2. Paste the URL to the Pinkka collection in the first box, and enter an appropriate deck name in the next one. Note that if you enter the name of an existing deck, it will be updated with any new cards from your query.
+3. Select any additional options. 
+    - I find that the default options (four cards at the "square" size) is sufficient for studying, although some will need to be manually edited. See my Studying Tips below.
+    - When choosing a common name, the selected option will display on the card, but all three languages will be saved in the note. You can edit your note template to change this later, or include multiple languages. Note that most collections don't have an English name available, and some taxa have no common names at all.
+    - If you have already imported some notes and are having issues with fields not importing, try deleting the note type from the Browse window.
+4. Click "Import" and your deck should be created. Downloading a large collection could take up to five minutes depending on your configuration.
 
 # My Studing Tips
 - Use the tags on the cards like family and sub-pinkka for [Custom Study](https://docs.ankiweb.net/filtered-decks.html?highlight=filtered%20deck#custom-study). You can also add your own tags, like "small-white-flower" or "aquatic" for example, to help with comparing different ones. 
     - Don't rely on this too much, since Anki works best by using large decks with a variety of terms to help your memory.
 
-- Sometimes the images downloaded by the script will be missing an important ID feature. You can click on the scientific name to visit the Pinkka page and see all the images, then download a better one and edit the card to add it.
+- Sometimes the images downloaded by the script will be missing an important ID feature. You can click on the scientific name to visit the Pinkka page and see all the images, then download a better one and edit the card to add it. Adding notes and customizing your cards is a good way to learn.
 
 - You can sync to your Anki account and use the app to study on your phone. It's free on Android but the official iOS app is a bit expensive, although there are some free forks of it.
 
