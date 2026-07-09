@@ -22,7 +22,7 @@ Please raise an issue on the [GitHub page](https://github.com/north-ross/Anki-Pi
     - If you have already imported some notes and are having issues with fields not importing, try deleting the note type from the Browse window.
 4. Click "Import" and your deck should be created. Downloading a large collection could take up to five minutes depending on your configuration.
 
-# My Studing Tips
+## My Studing Tips
 - Use the tags on the cards like family and sub-pinkka for [Custom Study](https://docs.ankiweb.net/filtered-decks.html?highlight=filtered%20deck#custom-study). You can also add your own tags, like "small-white-flower" or "aquatic" for example, to help with comparing different ones. 
     - Don't rely on this too much, since Anki works best by using large decks with a variety of terms to help your memory.
 
