@@ -9,7 +9,7 @@ from aqt.qt import QMessageBox
 from datetime import datetime
 
 BASE_URL = "https://fmnh-ws-prod3.it.helsinki.fi/pinkka/api"
-TESTING = True # set to true to just fetch the first four cards
+TESTING = False # set to true to just fetch the first four cards
 
 def add_log_message(self, message, level="INFO"):
     """Generate timestamped log message
@@ -60,7 +60,6 @@ def getPinkkaDeckID(self):
 
     # validate and set Pinkka deck ID
     pinkkaDeckID = url.rsplit("/", 1)[-1]
-    print(pinkkaDeckID)
 
     if pinkkaDeckID == "":
         QMessageBox.critical(
@@ -212,7 +211,7 @@ def create_note_list(self, species_list):
     # TODO: adapt to use self 
     self.status_label.setText("Downloading species data")
     mw.taskman.run_on_main(lambda: self.progress_bar.setVisible(True))
-    mw.taskman.run_on_main(lambda: self.progress_bar.setMaximum(len(species_list)))
+    mw.taskman.run_on_main(lambda: self.progress_bar.setMaximum(100))
     mw.taskman.run_on_main(lambda: mw.app.processEvents())
 
     req_images_number = int(self.images_number_input.cleanText()) # set to self.req_images_number
@@ -226,7 +225,7 @@ def create_note_list(self, species_list):
     if TESTING:
         species_list = species_list[0:16]
 
-    i=0
+    progress_number=0
     total = len(species_list)
     last_progress = datetime.now()
     for species in species_list:
@@ -316,27 +315,23 @@ def create_note_list(self, species_list):
         }
         note_list.append(note)
         
-        i+=1
+        progress_number += 1
+        prog_pct = progress_number / total * 100
         if (datetime.now() - last_progress).total_seconds() >= 1:
-            print(f"updating bar at {i}")
             mw.taskman.run_on_main(
-                # TODO: Fix problem here, value not displaying correctly
-                lambda prog=i: self.progress_bar.setValue(prog)
+                lambda prog=prog_pct: self.progress_bar.setValue(prog_pct)
             )
             mw.taskman.run_on_main(lambda: mw.app.processEvents())
             last_progress = datetime.now()
         
     note_count = len(note_list)
-    print(f"finished fetching {note_count}")
-    mw.taskman.run_on_main(
-        lambda notes=note_count: self.status_label.setText(f"Downloaded {notes} / {len(species_list)} species")
-    )
-    mw.taskman.run_on_main(lambda: mw.app.processEvents())
+    add_log_message(self, f"finished fetching {note_count}")
     return note_list
     
 
 def create_anki_deck(self, note_list):
     progress = 0
+    self.status_label.setText("Creating deck")
 
     deck = mw.col.decks.get(mw.col.decks.id(self.deck_name_input.text()))
     model = add_custom_model(self, mw.col)
@@ -350,6 +345,7 @@ def create_anki_deck(self, note_list):
     model["did"] = deck["id"]
     mw.col.models.save(model)
 
+    last_progress = datetime.now()
     for item in note_list:
         note = mw.col.newNote()
         # Get field names from the model in order
@@ -368,6 +364,7 @@ def create_anki_deck(self, note_list):
 
         progress += 1
         add_log_message(self, f"Created note {item['fields']['Species Name']}")
-        self.status_label.setText(
-            (f"Imported {progress}/{len(note_list)}"))
-        mw.app.processEvents()
+
+        if (datetime.now() - last_progress).total_seconds() >= 1:
+            mw.app.processEvents()
+            last_progress = datetime.now()

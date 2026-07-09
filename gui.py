@@ -147,7 +147,8 @@ class PinkkaImportDialog(QDialog):
 
         # Update UI to show completion
         self.status_label.setText("✅ Import completed successfully!")
-        
+        self.progress_bar.setValue(100)
+
         # Refresh deck browser
         mw.deckBrowser.refresh()
         
