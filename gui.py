@@ -2,7 +2,7 @@ from aqt import mw
 from aqt.qt import *
 from aqt.operations import QueryOp
 from aqt.utils import showInfo
-from .pinkka2anki import getPinkkaDeckID, get_all_species_ids, create_anki_deck
+from .pinkka2anki import getPinkkaDeckID, get_all_species_ids, create_note_list, create_anki_deck
 import time
 
 class PinkkaImportDialog(QDialog):
@@ -27,7 +27,7 @@ class PinkkaImportDialog(QDialog):
         # layout.addWidget(self.create_options_section())
         
         # Progress section
-        # layout.addWidget(self.create_progress_section())
+        layout.addWidget(self.create_progress_section())
         
         # Buttons section
         layout.addLayout(self.create_button_section())
@@ -40,9 +40,9 @@ class PinkkaImportDialog(QDialog):
         layout = QFormLayout()
         
         # Pinkka URL input
-        self.pinkka_id_input = QLineEdit()
-        self.pinkka_id_input.setPlaceholderText("e.g., https://pinkka.laji.fi/pinkat/#/pinkkas/8")
-        layout.addRow("Pinkka Deck URL:", self.pinkka_id_input)
+        self.text_url = QLineEdit()
+        self.text_url.setPlaceholderText("e.g., https://pinkka.laji.fi/pinkat/#/pinkkas/8")
+        layout.addRow("Pinkka Deck URL:", self.text_url)
         
         # Deck name input
         self.deck_name_input = QLineEdit()
@@ -50,8 +50,9 @@ class PinkkaImportDialog(QDialog):
         layout.addRow("Deck Name:", self.deck_name_input)
 
         # self.lang_input = QHBoxLayout() # This should be replaced with a dropdown or something
-        # self.images_number_input = QLineEdit()
-        # image_size = self.input_field.text() # This should also be a dropdown
+        # self.images_number_input = QLineEdit() (spinbox)
+        # self.image_size = self.input_field.text() # This should also be a dropdown
+        # self.subpinkka_tag = QCheckBox("", self) # include SubPinkka name as tag?
 
         group.setLayout(layout)
         return group
@@ -64,7 +65,13 @@ class PinkkaImportDialog(QDialog):
         self.import_button = QPushButton("Import")
         self.import_button.setStyleSheet("background-color: #4CAF50; color: white; padding: 8px;")
         self.import_button.clicked.connect(self.on_import_clicked)
+
+        self.close_button = QPushButton("Close")
+        self.close_button.clicked.connect(self.close)
+        self.close_button.setEnabled(False)  # Disabled until import completes
+
         layout.addWidget(self.import_button)
+        layout.addWidget(self.close_button)
         
         # Cancel button
         cancel_button = QPushButton("Cancel")
@@ -73,32 +80,67 @@ class PinkkaImportDialog(QDialog):
         
         return layout
 
-    def species_list_success(self, species_list) -> None:
-        showInfo(f"Found {len(species_list)} species")
+    def create_progress_section(self):
+        group = QGroupBox("Progress & Log")
+        layout = QVBoxLayout()
+        
+        # Progress bar
+        self.progress_bar = QProgressBar()
+        self.progress_bar.setVisible(False)
+        layout.addWidget(self.progress_bar)
+        
+        # Status label
+        self.status_label = QLabel("Status")
+        #self.status_label.setStyleSheet("color: gray; font-size: 11px;")
+        layout.addWidget(self.status_label)
+        
+        # Log display
+        self.log_display = QTextEdit()
+        self.log_display.setReadOnly(True)
+        self.log_display.setMaximumHeight(150)
+        self.log_display.setStyleSheet("background-color: #f5f5f5; font-family: monospace; font-size: 10px;")
+        layout.addWidget(self.log_display)
+        
+        group.setLayout(layout)
+        return group
 
+    def import_species(self, pinkka_id):
+        """Fetch species IDs, then create notes from them."""
+        
+        def on_species_ids_fetched(species_ids):
+            """Called when get_all_species_ids() completes."""
+            self.status_label.setText(f"Found {len(species_ids)} species")
+            
+            # Now start the second operation with the result from the first
+            QueryOp(
+                parent=mw,
+                op=lambda col: create_note_list(self, species_ids),
+                success=lambda result: self.on_list_created(result)
+            ).with_progress().run_in_background()
+        
+        # First operation: fetch species IDs
+        QueryOp(
+            parent=mw,
+            op=lambda col: get_all_species_ids(self, pinkka_id),
+            success=on_species_ids_fetched  # Pass the callback function
+        ).with_progress().run_in_background()
+
+    def on_list_created(self, note_list):
+        """Called when create_note_list() completes."""
+        create_anki_deck(self, note_list)
+
+        # Update UI to show completion
+        self.status_label.setText("✅ Import completed successfully!")
+        
+        # Refresh deck browser
+        mw.deckBrowser.refresh()
+        
+        # Disable import button, enable close button
+        self.import_button.setEnabled(False)
+        self.close_button.setEnabled(True)
+        self.close_button.setFocus()
+        
     def on_import_clicked(self):
         # Parameters:
         pinkka_id = getPinkkaDeckID(self)
-
-        species_ids = QueryOp(
-            # the active window (main window in this case)
-            parent=mw,
-            # the operation is passed the collection for convenience; you can
-            # ignore it if you wish
-            op=get_all_species_ids(pinkka_id),
-            # this function will be called if op completes successfully,
-            # and it is given the return value of the op
-            success = PinkkaImportDialog.species_list_success()
-        )
-        species_ids.with_progress().run_in_background()
-
-        notes = QueryOp(
-            # the active window (main window in this case)
-            parent=mw,
-            # the operation is passed the collection for convenience; you can
-            # ignore it if you wish
-            op=lambda species_ids: create_anki_deck(self.mw.col, species_ids),  # add arguments
-            # Write to Anki database,
-            success = showInfo("Successfully downloaded data and created deck")
-        )
-        notes.with_progress().run_in_background()
+        self.import_species(pinkka_id)

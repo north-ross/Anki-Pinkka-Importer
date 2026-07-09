@@ -1,42 +1,75 @@
 import time
 import json
 from pathlib import Path
-import requests
-import re
 import urllib
+import re
+import requests
+from aqt import mw
+from aqt.qt import QMessageBox
+from datetime import datetime
 
 BASE_URL = "https://fmnh-ws-prod3.it.helsinki.fi/pinkka/api"
+TESTING = False # set to true to just fetch the first four cards
+
+def add_log_message(self, message, level="INFO"):
+    """Generate timestamped log message
+
+    Args:
+        message (str): String to add to log
+        level (str, optional): Level of severity (affects color). 
+            Options: "INFO", "WARNING", "ERROR", "SUCCESS". Defaults to "INFO".
+    """
+    timestamp = datetime.now().strftime("%H:%M:%S")
+    colors = {"INFO": "black", "WARNING": "orange", "ERROR": "red", "SUCCESS": "green"}
+    color = colors.get(level, "black")
+    
+    log_text = f'<span style="color: {color};">[{timestamp}] {level}: {message}</span>'
+    self.log_display.append(log_text)
+    self.log_display.verticalScrollBar().setValue(
+        self.log_display.verticalScrollBar().maximum()
+    )
 
 # Get Pinkka ID, adapted from Quizlet plugin
 def getPinkkaDeckID(self):
-        # grab url input
-        url = self.text_url.text()
+    # grab url input
+    url = self.text_url.text()
 
-        # validate quizlet URL
-        if url == "":
-            self.label_results.setText("You forgot the deck URL :(")
-            return
-        elif not "pinkka.laji.fi" in url:
-            self.label_results.setText("Oops! That's not a Pinkka URL :(")
-            return
-        elif not re.search(r"https://pinkka.laji.fi/pinkat/#/pinkkas/[\d]+", url):
-            self.label_results.setText("Oops! Please use the full deck URL, e.g. https://pinkka.laji.fi/pinkat/#/pinkkas/8 :(")
-            return
+    # validate quizlet URL
+    if url == "":
+        QMessageBox.critical(
+            self,
+            "Invalid Input",
+            "You forgot the deck URL"
+        )
+        return
+    elif not "pinkka.laji.fi" in url:
+        QMessageBox.critical(
+            self,
+            "Invalid Input",
+            "Not a Pinkka URL:\n" + url
+        )
+        return
+    elif not re.search(r"https://pinkka.laji.fi/pinkat/#/pinkkas/[\d]+", url):
+        print("Failed regex")
+        QMessageBox.critical(
+            self,
+            "Invalid Input",
+            "Please use the URL for the Pinkka collection e.g.\nhttps://pinkka.laji.fi/pinkat/#/pinkkas/8. You entered:\n" + url
+        )
+        return
 
-        # voodoo needed for some error handling
-        if urllib.parse.urlparse(url).scheme:
-            urlPath = urllib.parse.urlparse(url).path
-        else:
-            urlPath = urllib.parse.urlparse("https://"+url).path
+    # validate and set Pinkka deck ID
+    pinkkaDeckID = url.rsplit("/", 1)[-1]
+    print(pinkkaDeckID)
 
-        # validate and set Quizlet deck ID
-        pinkkaDeckID = urlPath.strip("/")
-
-        if pinkkaDeckID == "":
-            self.label_results.setText("Oops! Please use the full deck URL, e.g. https://pinkka.laji.fi/pinkat/#/pinkkas/8 :(")
-            return
-
-        return pinkkaDeckID
+    if pinkkaDeckID == "":
+        QMessageBox.critical(
+            self,
+            "Invalid Input",
+            "There was some problem with your URL. Enter e.g.\nhttps://pinkka.laji.fi/pinkat/#/pinkkas/8. You entered:\n" + url
+        )
+        return
+    return pinkkaDeckID
 
 # Create Anki model (front: image, back: species name)
 # adapted from "Quizlet Plugin for Anki"
@@ -63,6 +96,7 @@ def add_custom_model(col):
     mm.addField(m, mm.newField("Family"))
     mm.addField(m, mm.newField("Finnish Name"))
     mm.addField(m, mm.newField("Pinkka URL"))
+    mm.addField(m, mm.newField("Notes"))
     
     # add cards
     t = mm.newTemplate("ImageFront")
@@ -70,22 +104,23 @@ def add_custom_model(col):
     # front
     t['qfmt'] = "{{Images}}"
     t['afmt'] = '{{FrontSide}}<hr id="answer">'+\
-        '<i><u><a href="{{Pinkka URL}}" style="color:white;">{{Species Name}}</a></u></i>'+\
-        '<br><b>{{Family}}</b><br>{{Finnish Name}}'
+        '<i><u><a href="{{Pinkka URL}}" style="color:white;font-size: 16px;">{{Species Name}}</a></u></i>'+\
+        '<br><b>{{Family}}</b><br>{{Finnish Name}}<br>'
     mm.addTemplate(m, t)
     mm.add(m)
     return m
 
-def get_all_species_ids(pinkka_id):
+def get_all_species_ids(self, pinkka_id):
     """Fetch all species IDs and sub name from a pinkka and its subPinkkas
     Returns a nested list with pairs of values (species ID, subPinkka name)"""
-    
+
+    self.status_label.setText(f"Getting species list")
     # Get the list of sub pinkkas
     pinkka_response = requests.get(f"{BASE_URL}/pinkkas/{pinkka_id}", timeout=120)
     pinkka_data = pinkka_response.json()
     
     sub_pinkkas = pinkka_data.get('subPinkkas', [])
-    print(f"Found {len(sub_pinkkas)} subPinkkas")
+    add_log_message(self, f"Found {len(sub_pinkkas)} subPinkkas")
     
     all_taxon_ids = []
     
@@ -102,10 +137,12 @@ def get_all_species_ids(pinkka_id):
         species_in_sub = sub_data.get('speciesCards', [])  # or 'species', 'cards', etc.
         taxon_ids = [[s['id'], sub_name] for s in species_in_sub]
 
-        print(f"  {sub_name}: {len(taxon_ids)} species")
         all_taxon_ids.extend(taxon_ids)
-
-    print(f"\nTotal species across all subPinkkas: {len(all_taxon_ids)}")
+        # mw.taskman.run_on_main(
+        #     lambda name=sub_name: add_log_message(self, f"\t{name}: {len(species_in_sub)} species")
+        # )
+        # mw.taskman.run_on_main(lambda: mw.app.processEvents())
+    print("reached end of function")
     return all_taxon_ids
 
 def fetch_species_data(species_id):
@@ -115,7 +152,8 @@ def fetch_species_data(species_id):
         response.raise_for_status()
         return response.json()
     except Exception as e:
-        print(f"Error fetching species {species_id}: {e}")
+        print(
+            "Network Error",f"Error fetching species {species_id}: {e}")
         return None
 
 def download_image(image_url, species_id, i):
@@ -129,11 +167,9 @@ def download_image(image_url, species_id, i):
     Returns:
         pathlib.Path: path to to the saved image
     """
-    # Create media folder
-    media_dir = Path("pinkka_media")
-    media_dir.mkdir(exist_ok=True)
 
     filename = f"species_{species_id}_{i}.jpg"
+    media_dir = Path( mw.col.media.dir())
     filepath = media_dir / filename
 
     # If image was already downloaded then skip
@@ -145,53 +181,53 @@ def download_image(image_url, species_id, i):
             # Save image
             with open(filepath, 'wb') as f:
                 f.write(response.content)
+                print(f"\twrote to {filepath}")
             return filepath
         except Exception as e:
             print(f"Error downloading image for {species_id}: {e}")
             return None
     else:
+        print(f"\t{filepath} cached")
         return filepath
 
-
-def create_anki_deck(species_list, req_images_number=4, image_size="square", lang='en', pinkka_name = 'My Pinkka Deck', make_subdecks=False):
-    # TODO: Adapt to get parameters from self. insetad of arguments
-    """Creates an Anki package (.apkg) from a provided list of species IDs. 
-        Downloads the specified number of images. 
+def create_note_list(self, species_list):
+    """Extracts relevant info from Pinkka API for the given list of species into a list of dicts.
 
     Args:
-        species_list (list): List of species IDs from the Pinkka API. 
-            Get using pinkka2anki.get_all_species_ids().
-        req_images_number (int, optional): Number of requested images to download and include in the card. 
-            Choose 100 for maximum (will not cause error). Defaults to 4.
-        image_size (str, optional): Set size of downloaded images: "original" > "full" > "large" > "square" > "thumbnail". 
-        lang (str, optional): Language used for taxonomy tags (fi, sv or en). Defaults to 'en'.
-        pinkka_name (str, optional): Language used for taxonomy tags (fi, sv or en). Defaults to 'en'.
-        make_subdecks (boolean, optional): Generate subdecks from the subPinkkas
+        species_list (list): List of species IDs from Pinkka
+
+    Returns:
+        list: List of dictionaries containing species info for creating notes.
     """
-    if make_subdecks:
-        sub_pinkkas = set([x[1] for x in species_list])
-        subdecks_dict = {}
-        deck_id=1
-        for sub_pinkka in sub_pinkkas:
-            subdeck = Deck(deck_id, f"{pinkka_name}::{sub_pinkka}" )
-            subdecks_dict[sub_pinkka] = subdeck
-            print(f"{subdeck.name} created")
-            deck_id+=1
-
-    else:
-        deck_id = int(time.time() * 1000)  # Unique deck ID safe for SQLite integer
-        deck = Deck(deck_id, f'{pinkka_name}')
-
+    # TODO: adapt to use self 
+    self.status_label.setText("Downloading species data")
+    self.progress_bar.setVisible(True)
+    print(f"LENgth of species list: {len(species_list)}")
+    self.progress_bar.setMaximum(len(species_list))
+    req_images_number = 4 # set to self.req_images_number
+    image_size="square"
+    get_back_images = False
+    lang='en'
 
     media_list = []
+    note_list = []
     
+    if TESTING:
+        species_list = species_list[0:4]
+
+    i=0
     for species in species_list:
         species_id = species[0]
         sub_pinkka = species[1]
         data = fetch_species_data(species_id)
-        print(f"got data for {species_id} ({data.get('scientificName')})")
+        # mw.taskman.run_on_main(
+        #     lambda: add_log_message(self, f"got data for {species_id} ({data.get('scientificName')})")
+        # )
         if not data:
-            print(f"Could not find species {species_id}")
+            mw.taskman.run_on_main(
+                lambda sid=species_id: add_log_message(self,  f"Could not find species {sid}", level="WARNING")
+            )
+            mw.taskman.run_on_main(lambda: mw.app.processEvents())
             continue
         
         # Extract species name, image URLs, taxonomy info
@@ -224,10 +260,10 @@ def create_anki_deck(species_list, req_images_number=4, image_size="square", lan
         # loop over images and download
         if images_number > 0:
             img_field = ""
-            print("\t", images_number, "images available")
+            add_log_message(self, f"\t{images_number} images available")
             for i in range(0, images_number):
                 # get first half of images from start
-                if i <= round(images_number/2):
+                if not get_back_images or (i+1) <= round(images_number/2):
                     image_i = i
                 else: # get the rest of images from the end of the list
                     image_i = max_images - (images_number-i)
@@ -239,37 +275,77 @@ def create_anki_deck(species_list, req_images_number=4, image_size="square", lan
                 # format for field
                 img_field = f"{img_field} <img src=\"{image_path.name}\">"
         else:
-            print("\tNo Images Available. Skipping")
+            mw.taskman.run_on_main(
+                lambda: add_log_message(self, "\tNo Images Available. Skipping", level="WARNING")
+            )
             continue
         # Pinkka URL
         species_url = f"https://pinkka.laji.fi/pinkat/#/speciescards/{species_id}"
 
-        ## TODO: edit from here to use anki lib
         # Create Anki note
-        note = Note(
-            model=MODEL,
-            fields=[species_name, img_field, family, finnish_name, species_url],
-            tags= taxonomy_list,
-            guid=taxon_id
-        )
-        if make_subdecks:
-            subdecks_dict[sub_pinkka].add_note(note)
-            print(f"\tadded to {subdecks_dict[sub_pinkka].name}")
-        else:
-            deck.add_note(note)
-
-    # pack to package with media
-    if make_subdecks:
-        package = Package(subdecks_dict.values())
-        print(f"Decks: {[x.name for x in subdecks_dict.values()]}")
-        total_notes = sum([len(deck.notes) for deck in subdecks_dict.values()])
-    else: 
-        package = Package(deck)
-        total_notes = len(deck.notes)
-    print(f"Created notes for {total_notes} / {len(species_list)} species")
-    package.media_files = media_list
+        note = {
+            'fields': {
+                "Species Name": species_name, 
+                "Images": img_field, 
+                "Family": family, 
+                "Finnish Name": finnish_name, 
+                "Pinkka URL": species_url,
+                "Notes": ""
+                },
+            'tags': taxonomy_list,
+            'guid': taxon_id
+        }
+        note_list.append(note)
+        
+        i+=1
+        # mw.taskman.run_on_main(
+        #     lambda prog=i: self.progress_bar.setValue(prog)
+        # )
+        # mw.taskman.run_on_main(lambda: mw.app.processEvents())
+        
+    note_count = len(note_list)
+    # mw.taskman.run_on_main(
+    #     lambda notes=note_count: self.status_label.setText(f"Downloaded {notes} / {len(species_list)} species")
+    # )
+    #mw.taskman.run_on_main(lambda: mw.app.processEvents())
+    return note_list
     
-    # Save deck
-    outfile = f'pinkka_{pinkka_name.replace(" ", "_")}.apkg'
-    package.write_to_file(outfile)
-    print(f"Anki deck created: {outfile}")
+
+def create_anki_deck(self, note_list):
+    progress = 0
+
+    deck = mw.col.decks.get(mw.col.decks.id(self.deck_name_input.text()))
+    model = add_custom_model(mw.col)
+
+    # assign custom model to new deck
+    mw.col.decks.select(deck["id"])
+    mw.col.decks.save(deck)
+
+    # assign new deck to custom model
+    mw.col.models.set_current(model)
+    model["did"] = deck["id"]
+    mw.col.models.save(model)
+
+    for item in note_list:
+        note = mw.col.newNote()
+        # Get field names from the model in order
+        field_names = [f["name"] for f in model["flds"]]
+        print("FIELD NAMES:", field_names)
+        # Assign by index
+        for idx, field_name in enumerate(field_names):
+            if field_name in item["fields"]:
+                note.fields[idx] = item["fields"][field_name]
+                print(field_name)
+
+        # Add all tags from dict
+        for tag in item['tags']:
+            note.add_tag(tag)
+
+        # Add note to deck
+        mw.col.addNote(note)
+        print("Added note")
+
+        progress += 1
+        self.status_label.setText(
+            (f"Imported {progress}/{len(note_list)}"))
+        mw.app.processEvents()
