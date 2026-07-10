@@ -9,7 +9,7 @@ from aqt.qt import QMessageBox
 from datetime import datetime
 
 BASE_URL = "https://fmnh-ws-prod3.it.helsinki.fi/pinkka/api"
-TESTING = True # set to true to just fetch the first four cards
+TESTING = False # set to true to just fetch the first four cards
 
 def add_log_message(self, message, level="INFO"):
     """Generate timestamped log message
