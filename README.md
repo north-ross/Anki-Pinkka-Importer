@@ -17,7 +17,7 @@ Please raise an issue on the [GitHub page](https://github.com/north-ross/Anki-Pi
     - I find that the default options (four cards at the "square" size) is sufficient for studying, although some will need to be manually edited. See my Studying Tips below.
     - When choosing a common name, the selected option will display on the card, but all three languages will be saved in the note. You can edit your note template to change this later, or include multiple languages. Note that most collections don't have an English name available, and some taxa have no common names at all.
     - If you have already imported some notes and are having issues with fields not importing, try deleting the note type from the Browse window.
-4. Click "Import" and your deck should be created. Downloading a large collection could take up to five minutes depending on your configuration.
+4. Click "Import" and your deck should be created. Downloading a large collection could take up to ten minutes depending on your configuration.
 
 ![GUI example](Example-image.png) ![Card example](Example-card.png)
 
@@ -40,3 +40,5 @@ If you have found this useful this consider donating to the free and open source
 Some was code adapted from [Anki Quizlet Importer Extended](https://github.com/sviatoslav-lebediev/anki-quizlet-importer-extended).
 
 Some code advice came from [duck.ai](https://duck.ai) (Claude Haiku 4.5).
+
+A future update could add an option to keep the learning progress of a species when importing a new deck that contains the same species (e.g. IPS-153 and IPS-177 have some overlap)

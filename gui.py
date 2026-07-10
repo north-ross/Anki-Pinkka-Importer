@@ -24,7 +24,7 @@ class PinkkaImportDialog(QDialog):
         layout.addWidget(self.create_input_section())
         
         # Options section
-        # layout.addWidget(self.create_options_section())
+        layout.addWidget(self.create_options_section())
         
         # Progress section
         layout.addWidget(self.create_progress_section())
@@ -42,28 +42,46 @@ class PinkkaImportDialog(QDialog):
         # Pinkka URL input
         self.text_url = QLineEdit()
         self.text_url.setPlaceholderText("e.g., https://pinkka.laji.fi/pinkat/#/pinkkas/8")
-        layout.addRow("Pinkka Deck URL:", self.text_url)
+        layout.addRow("Pinkka Collection URL:", self.text_url)
         
         # Deck name input
         self.deck_name_input = QLineEdit()
         self.deck_name_input.setPlaceholderText("e.g., IPS-153 Flora of Subarctic Europe")
         layout.addRow("Deck Name:", self.deck_name_input)
 
+        group.setLayout(layout)
+        return group
+
+    def create_options_section(self):
+        """Create additional inputs for config options"""
+        group = QGroupBox("Options")
+        layout = QFormLayout()
+
+        # max number of images to download
         self.images_number_input = QSpinBox()
         self.images_number_input.setRange(1,20)
         self.images_number_input.setValue(4)
+        self.images_number_input.setToolTip("Max number of images per species to download.")
         layout.addRow("Number of Images (max):", self.images_number_input)
 
+        # Image size (resolution)
         self.image_size = QComboBox()
         self.image_size.addItems(['square (~30kB)', 'large (~80 kB)', 'thumb (~10kB)'])
+        self.image_size.setToolTip("Image resolution options. \"Square\" is usually sufficient for flashcards")
         layout.addRow("Image size:", self.image_size)
 
+        # Which common name to include on flashcard
         self.common_name_input = QComboBox()
         self.common_name_input.addItems(['Finnish Name', 'Swedish Name', 'English Name', 'None'])
+        self.common_name_input.setToolTip(
+            "You can edit the template later to include multiple. Note that many collection have no English names in Pinkka.")
         layout.addRow("Common name to include on card:", self.common_name_input)
+
 
         self.lang_input = QComboBox()
         self.lang_input.addItems(['en', 'fi', 'sv'])
+        self.lang_input.setToolTip(
+            "Language to use for the taxonomic rank in the tags, e.g. family/heimo/familj")
         layout.addRow("Language for taxonomy tags:", self.lang_input)
 
         #TODO: Add these more options:
