@@ -38,6 +38,6 @@ If you have found this useful this consider donating to the free and open source
 
 Some was code adapted from [Anki Quizlet Importer Extended](https://github.com/sviatoslav-lebediev/anki-quizlet-importer-extended).
 
-Some code advice came from [duck.ai](https://duck.ai) (Claude Haiku 4.5).
+Some code advice came from [duck.ai](https://duck.ai) (Claude Haiku 4.5), but no AI-generated code was used.
 
 A future update could add an option to keep the learning progress of a species when importing a new deck that contains the same species (e.g. IPS-153 and IPS-177 have some overlap)
